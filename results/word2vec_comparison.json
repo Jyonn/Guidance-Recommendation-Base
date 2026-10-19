@@ -1,0 +1,121 @@
+{
+  "feature_report": {
+    "items": 1682,
+    "covered_items": 1604,
+    "zero_oov_items": 78,
+    "matched_title_tokens": 4522,
+    "title_tokens": 4886,
+    "unique_matched_tokens": 2049,
+    "dimension": 100,
+    "tokenizer": "lowercase [a-z]+(?:'[a-z]+)? (Word2Vec-lab English rule)",
+    "pooling": "mean of matched raw word vectors, then L2 normalization; OOV ignored",
+    "vectors_sha256": "005ed82ce4ccf6c1334d77c4f28382649f27bd46d4492504d3f2d98c536396fe",
+    "metadata_sha256": "553841ebc7de3a0fd0d6b62a204ea30c1e651aacfb2814c7a6584ac52f2c5701"
+  },
+  "baseline": "runs/mixed-pool-6-20261019-165403",
+  "jobs": [
+    {
+      "model": "mf",
+      "command": [
+        "/Users/jyonn/Projects/Guidances/Recommendation-Base/Jyonn/.venv/bin/python",
+        "/Users/jyonn/Projects/Guidances/Recommendation-Base/Jyonn/runs/word2vec-2-20261019-170853/train.py",
+        "--model",
+        "mf",
+        "--loss",
+        "bce",
+        "--neg-mode",
+        "random",
+        "--item-features",
+        "/Users/jyonn/Projects/Guidances/Recommendation-Base/Jyonn/data/features/text8-100d-titles.pt",
+        "--data-dir",
+        "/Users/jyonn/Projects/Guidances/Recommendation-Base/Jyonn/data/processed",
+        "--output-dir",
+        "/Users/jyonn/Projects/Guidances/Recommendation-Base/Jyonn/runs/word2vec-2-20261019-170853/mf-bce-sampling"
+      ],
+      "pid": 9348,
+      "exit_code": 0
+    },
+    {
+      "model": "ncf",
+      "command": [
+        "/Users/jyonn/Projects/Guidances/Recommendation-Base/Jyonn/.venv/bin/python",
+        "/Users/jyonn/Projects/Guidances/Recommendation-Base/Jyonn/runs/word2vec-2-20261019-170853/train.py",
+        "--model",
+        "ncf",
+        "--loss",
+        "bce",
+        "--neg-mode",
+        "random",
+        "--item-features",
+        "/Users/jyonn/Projects/Guidances/Recommendation-Base/Jyonn/data/features/text8-100d-titles.pt",
+        "--data-dir",
+        "/Users/jyonn/Projects/Guidances/Recommendation-Base/Jyonn/data/processed",
+        "--output-dir",
+        "/Users/jyonn/Projects/Guidances/Recommendation-Base/Jyonn/runs/word2vec-2-20261019-170853/ncf-bce-sampling"
+      ],
+      "pid": 9349,
+      "exit_code": 0
+    }
+  ],
+  "data_sha256": {
+    "validation.csv": "0c02645045e651e607de69fe1161e1bb0a89fa4e2667d2bd6f68ba043ac8d522",
+    "test.csv": "b669ff8c413999d06b6c3182cf19f255e95810e47326466be7acf5bc303eb092",
+    "train.csv": "bd2dc0d362d7ab12bbe2d608e9fb37a5ca9160a1b373f233ddab72decb0bdf9e"
+  },
+  "baseline_run": "runs/mixed-pool-6-20261019-165403",
+  "feature_run": "runs/word2vec-2-20261019-170853",
+  "catalog_coverage": {
+    "covered": 1505,
+    "total": 1576
+  },
+  "comparison": [
+    {
+      "model": "mf",
+      "variant": "ID only",
+      "best_epoch": 9,
+      "epochs_run": 14,
+      "NDCG@5": 0.05452988057780159,
+      "NDCG@10": 0.0606817017695077,
+      "NDCG@20": 0.07955744801910565,
+      "Recall@5": 0.03866474906554316,
+      "Recall@10": 0.06625057792037227,
+      "Recall@20": 0.12022473950805183
+    },
+    {
+      "model": "mf",
+      "variant": "ID + Word2Vec",
+      "best_epoch": 18,
+      "epochs_run": 23,
+      "NDCG@5": 0.06548400305321746,
+      "NDCG@10": 0.07515640410322122,
+      "NDCG@20": 0.09790397354555484,
+      "Recall@5": 0.05048728985622807,
+      "Recall@10": 0.0873875016294589,
+      "Recall@20": 0.15113351183875423
+    },
+    {
+      "model": "ncf",
+      "variant": "ID only",
+      "best_epoch": 8,
+      "epochs_run": 13,
+      "NDCG@5": 0.047131466424871836,
+      "NDCG@10": 0.05458800317446696,
+      "NDCG@20": 0.07117276269913923,
+      "Recall@5": 0.03307946197671793,
+      "Recall@10": 0.06088327017041894,
+      "Recall@20": 0.10622852821378016
+    },
+    {
+      "model": "ncf",
+      "variant": "ID + Word2Vec",
+      "best_epoch": 8,
+      "epochs_run": 13,
+      "NDCG@5": 0.05048261575395194,
+      "NDCG@10": 0.05706737466437665,
+      "NDCG@20": 0.07405139868245755,
+      "Recall@5": 0.03841381663450593,
+      "Recall@10": 0.06468321494757077,
+      "Recall@20": 0.11051011666746915
+    }
+  ]
+}
