@@ -1,0 +1,26 @@
+{
+  "source_sha256": "06416e597f82b7342361e41163890c81036900f418ad91315590814211dca490",
+  "original_rows": 100000,
+  "dropped_score_3": 27145,
+  "retained_rows": 72855,
+  "users": 943,
+  "items": 1642,
+  "split_rule": "Per user after filtering; stable timestamp order; boundaries floor(0.8*N), floor(0.9*N)",
+  "splits": {
+    "train": {
+      "rows": 57904,
+      "positive": 45315,
+      "negative": 12589
+    },
+    "validation": {
+      "rows": 7247,
+      "positive": 4962,
+      "negative": 2285
+    },
+    "test": {
+      "rows": 7704,
+      "positive": 5098,
+      "negative": 2606
+    }
+  }
+}
