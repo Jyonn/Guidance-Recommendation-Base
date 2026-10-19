@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parent
 
 def attach_features(model, features):
     if features is not None:
-        model.item_features = nn.Embedding.from_pretrained(features, freeze=True)
+        model.item_features = nn.Embedding.from_pretrained(features, freeze=True)  # 100->64
         model.feature_projection = nn.Linear(features.shape[1], model.item.embedding_dim, bias=False)
 
 
@@ -49,7 +49,7 @@ class MF(nn.Module):
 
 class NCF(nn.Module):
     """Embedding concatenation followed by a plain MLP."""
-    def __init__(self, users, items, dim, hidden, dropout, features=None):
+    def __init__(self, users, items, dim, hidden: list, dropout, features=None):
         super().__init__()
         self.user = nn.Embedding(users, dim)
         self.item = nn.Embedding(items, dim)
@@ -118,7 +118,7 @@ def make_examples(rows, loss, mode, n_items, negatives, seed):
 
 def batch_loss(model, batch, loss, device):
     u, i, target = (x.to(device) for x in batch)
-    scores = model(u, i)
+    scores = model(u, i)    # [B]
     if loss == 'bpr':
         return F.softplus(model(u, target) - scores).mean()
     if loss == 'bce':
@@ -146,12 +146,17 @@ def run(args):
     torch.manual_seed(args.seed)
     torch.set_num_threads(args.threads)
     device = torch.device(args.device)
+
+
     data, user_ids, item_ids = load_data(args.data_dir)
     features = None
     if args.item_features is not None:
         from item_features import load_features
         features = load_features(args.item_features, item_ids)
     model = build_model(vars(args), len(user_ids), len(item_ids), features).to(device)
+
+
+
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     # Both training modes share fixed, real-label validation/test data.
     validation = make_examples(data['validation'], args.loss, 'real', len(item_ids), args.negatives, args.seed)
@@ -161,6 +166,10 @@ def run(args):
     best, best_epoch, stale = float('inf'), 0, 0
     best_state = None
     history = []
+
+
+
+
     for epoch in range(1, args.epochs + 1):
         training = make_examples(data['train'], args.loss, args.neg_mode, len(item_ids), args.negatives, args.seed + epoch)
         generator = torch.Generator().manual_seed(args.seed + epoch)
