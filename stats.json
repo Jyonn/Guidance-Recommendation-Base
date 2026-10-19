@@ -5,22 +5,28 @@
   "retained_rows": 72855,
   "users": 943,
   "items": 1642,
-  "split_rule": "Per user after filtering; stable timestamp order; boundaries floor(0.8*N), floor(0.9*N)",
+  "split_rule": "Per user on all interactions; stable timestamp order; boundaries floor(0.8*N), floor(0.9*N); then remove score=3 within each split",
   "splits": {
     "train": {
-      "rows": 57904,
-      "positive": 45315,
-      "negative": 12589
+      "rows_before_filter": 79619,
+      "dropped_score_3": 21366,
+      "rows": 58253,
+      "positive": 45590,
+      "negative": 12663
     },
     "validation": {
-      "rows": 7247,
-      "positive": 4962,
-      "negative": 2285
+      "rows_before_filter": 9942,
+      "dropped_score_3": 2901,
+      "rows": 7041,
+      "positive": 4794,
+      "negative": 2247
     },
     "test": {
-      "rows": 7704,
-      "positive": 5098,
-      "negative": 2606
+      "rows_before_filter": 10439,
+      "dropped_score_3": 2878,
+      "rows": 7561,
+      "positive": 4991,
+      "negative": 2570
     }
   }
 }

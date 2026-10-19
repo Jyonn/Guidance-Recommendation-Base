@@ -18,16 +18,19 @@ def preprocess(source, output):
             if not 1 <= score <= 5:
                 raise ValueError(f"Invalid score on line {index + 1}")
             original[score] += 1
-            if score != 3:
-                users[user].append((timestamp, index, item, score))
+            users[user].append((timestamp, index, item, score))
     splits = {name: [] for name in ("train", "validation", "test")}
+    before_filter = Counter()
+    dropped = Counter()
     for user, events in sorted(users.items()):
         events.sort(key=lambda row: (row[0], row[1]))
         n = len(events)
         a, b = n * 8 // 10, n * 9 // 10
         for name, part in zip(splits, (events[:a], events[a:b], events[b:])):
+            before_filter[name] += len(part)
+            dropped[name] += sum(score == 3 for _, _, _, score in part)
             splits[name].extend((user, item, score, timestamp, int(score > 3))
-                                for timestamp, _, item, score in part)
+                                for timestamp, _, item, score in part if score != 3)
     output.mkdir(parents=True, exist_ok=True)
     summary = {
         "source_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
@@ -36,7 +39,7 @@ def preprocess(source, output):
         "retained_rows": sum(map(len, splits.values())),
         "users": len(users),
         "items": len({r[1] for rows in splits.values() for r in rows}),
-        "split_rule": "Per user after filtering; stable timestamp order; boundaries floor(0.8*N), floor(0.9*N)",
+        "split_rule": "Per user on all interactions; stable timestamp order; boundaries floor(0.8*N), floor(0.9*N); then remove score=3 within each split",
         "splits": {},
     }
     for name, rows in splits.items():
@@ -45,6 +48,8 @@ def preprocess(source, output):
             writer.writerow(("user_id", "item_id", "score", "timestamp", "label"))
             writer.writerows(rows)
         summary["splits"][name] = {
+            "rows_before_filter": before_filter[name],
+            "dropped_score_3": dropped[name],
             "rows": len(rows), "positive": sum(r[4] for r in rows),
             "negative": sum(1 - r[4] for r in rows),
         }

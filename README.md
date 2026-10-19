@@ -11,8 +11,8 @@ python3 preprocess.py
 处理规则：
 
 - score < 3 为真实负样本（label=0），score > 3 为正样本（label=1），剔除 score=3，不生成额外负样本。
-- 先过滤，再按用户分组并按 timestamp 升序排列；时间相同时保留原始文件行序。
-- 对每个用户的 N 条记录，训练集为 `[0, floor(0.8N))`，验证集为 `[floor(0.8N), floor(0.9N))`，测试集为剩余记录。整数取整使整体比例略有偏差。
+- 先对全部交互按用户分组并按 timestamp 升序排列；时间相同时保留原始文件行序。
+- 对每个用户过滤前的 N 条记录，训练集为 `[0, floor(0.8N))`，验证集为 `[floor(0.8N), floor(0.9N))`，测试集为剩余记录。完成划分后，分别剔除各集合中的 score=3 交互，不重新划分。整数取整及过滤会使最终比例偏离 8:1:1。
 - 保留原始 user_id、item_id（从 1 开始）和 Unix 时间戳，不重编码。不保证验证/测试中的物品都出现在训练集中。
 
 输出为 `data/processed/train.csv`、`validation.csv`、`test.csv`，字段为 `user_id,item_id,score,timestamp,label`。`stats.json` 记录数据指纹和样本统计。
