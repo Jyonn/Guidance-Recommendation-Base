@@ -56,3 +56,13 @@ python -m unittest discover -s tests -v
 ```
 
 每组一个独立 CPU 进程、一个计算线程，使用训练入口的默认超参数（seed=42、LR=0.001、dim=32、batch=1024、最多100轮、patience=5、min_delta=0.0001、每正样本1个负样本）。sampling 对应训练入口的 `--neg-mode random`。结果保存到新的 `runs/parallel-10-时间戳/`；每组包含日志、最佳模型和指标，根目录包含代码快照、数据指纹、运行命令及 `summary.csv/json`。
+
+## Top-K 排序评估
+
+```sh
+.venv/bin/python evaluate_ranking.py --run-dir runs/parallel-10-20261019-164504
+```
+
+加载每组最佳权重，以过滤后的训练物品全集为候选，排除每个用户训练及验证集的全部已交互物品（含真实负样本），测试集 score>3 为相关项。不做候选负采样。对至少有一个测试正样本的用户做宏平均，输出 Recall/NDCG@5/10/20；同分按原始 item_id 升序排列。无测试正样本的用户不计入均值，数量会单独报告。排序评估使用原始模型分数，与 sigmoid 分数排序一致。各组使用相同数据和候选集合。
+
+Recall@K 为前 K 个推荐中命中正样本数除以该用户测试正样本总数；NDCG@K 按 log2(rank+1) 折扣，理想排序按 min(K, 测试正样本数) 计算。各组输出 `ranking_metrics.json`，运行目录输出 `ranking_summary.csv/json`。
