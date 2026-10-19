@@ -23,9 +23,10 @@ def preprocess(source, output):
     before_filter = Counter()
     dropped = Counter()
     for user, events in sorted(users.items()):
-        events.sort(key=lambda row: (row[0], row[1]))
+        events.sort(key=lambda row: (row[0], row[2], row[1]))
         n = len(events)
-        a, b = n * 8 // 10, n * 9 // 10
+        a = n * 8 // 10
+        b = a + n // 10
         for name, part in zip(splits, (events[:a], events[a:b], events[b:])):
             before_filter[name] += len(part)
             dropped[name] += sum(score == 3 for _, _, _, score in part)
@@ -39,7 +40,7 @@ def preprocess(source, output):
         "retained_rows": sum(map(len, splits.values())),
         "users": len(users),
         "items": len({r[1] for rows in splits.values() for r in rows}),
-        "split_rule": "Per user on all interactions; stable timestamp order; boundaries floor(0.8*N), floor(0.9*N); then remove score=3 within each split",
+        "split_rule": "Per user on all interactions; timestamp then item_id order; train length floor(0.8*N), validation length floor(0.1*N), remainder test; then remove score=3 within each split",
         "splits": {},
     }
     for name, rows in splits.items():

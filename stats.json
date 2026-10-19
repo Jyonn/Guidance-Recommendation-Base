@@ -5,28 +5,28 @@
   "retained_rows": 72855,
   "users": 943,
   "items": 1642,
-  "split_rule": "Per user on all interactions; stable timestamp order; boundaries floor(0.8*N), floor(0.9*N); then remove score=3 within each split",
+  "split_rule": "Per user on all interactions; timestamp then item_id order; train length floor(0.8*N), validation length floor(0.1*N), remainder test; then remove score=3 within each split",
   "splits": {
     "train": {
       "rows_before_filter": 79619,
-      "dropped_score_3": 21366,
-      "rows": 58253,
-      "positive": 45590,
-      "negative": 12663
+      "dropped_score_3": 21367,
+      "rows": 58252,
+      "positive": 45602,
+      "negative": 12650
     },
     "validation": {
-      "rows_before_filter": 9942,
-      "dropped_score_3": 2901,
-      "rows": 7041,
-      "positive": 4794,
-      "negative": 2247
+      "rows_before_filter": 9596,
+      "dropped_score_3": 2795,
+      "rows": 6801,
+      "positive": 4618,
+      "negative": 2183
     },
     "test": {
-      "rows_before_filter": 10439,
-      "dropped_score_3": 2878,
-      "rows": 7561,
-      "positive": 4991,
-      "negative": 2570
+      "rows_before_filter": 10785,
+      "dropped_score_3": 2983,
+      "rows": 7802,
+      "positive": 5155,
+      "negative": 2647
     }
   }
 }
