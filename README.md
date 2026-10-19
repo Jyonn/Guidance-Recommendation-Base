@@ -48,3 +48,11 @@ python -m unittest discover -s tests -v
 ```
 
 已在 Python 3.11 / PyTorch 2.14.1 / CPU 环境验证：12 种组合均完成完整 MovieLens 数据上的单轮训练；单元测试覆盖采样排除规则、BPR 损失方向、全部组合及最佳权重恢复。默认 MF + real + BCE 实跑于第 36 轮 early stop，最佳轮次 31，验证 BCE 0.460639，测试 BCE 0.471653（seed=42）。
+
+并行运行 10 组实验（MF/NCF × BCE/MSE/BPR × real/sampling，排除 BPR+real）：
+
+```sh
+.venv/bin/python run_experiments.py
+```
+
+每组一个独立 CPU 进程、一个计算线程，使用训练入口的默认超参数（seed=42、LR=0.001、dim=32、batch=1024、最多100轮、patience=5、min_delta=0.0001、每正样本1个负样本）。sampling 对应训练入口的 `--neg-mode random`。结果保存到新的 `runs/parallel-10-时间戳/`；每组包含日志、最佳模型和指标，根目录包含代码快照、数据指纹、运行命令及 `summary.csv/json`。
