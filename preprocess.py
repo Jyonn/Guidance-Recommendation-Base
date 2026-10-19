@@ -32,15 +32,25 @@ def preprocess(source, output):
             dropped[name] += sum(score == 3 for _, _, _, score in part)
             splits[name].extend((user, item, score, timestamp, int(score > 3))
                                 for timestamp, _, item, score in part if score != 3)
+    train_items = {row[1] for row in splits["train"]}
+    before_cold_filter = {name: len(rows) for name, rows in splits.items()}
+    cold_items = {row[1] for name in ("validation", "test")
+                  for row in splits[name] if row[1] not in train_items}
+    for name in ("validation", "test"):
+        splits[name] = [row for row in splits[name] if row[1] in train_items]
     output.mkdir(parents=True, exist_ok=True)
     summary = {
         "source_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
         "original_rows": sum(original.values()),
         "dropped_score_3": original[3],
+        "dropped_cold_item_rows": sum(before_cold_filter[name] - len(rows)
+                                      for name, rows in splits.items()),
+        "dropped_cold_items": len(cold_items),
+        "train_items": len(train_items),
         "retained_rows": sum(map(len, splits.values())),
         "users": len(users),
         "items": len({r[1] for rows in splits.values() for r in rows}),
-        "split_rule": "Per user on all interactions; timestamp then item_id order; train length floor(0.8*N), validation length floor(0.1*N), remainder test; then remove score=3 within each split",
+        "split_rule": "Per user on all interactions; timestamp then item_id order; train length floor(0.8*N), validation length floor(0.1*N), remainder test; then remove score=3 within each split; then keep evaluation items present in filtered training set",
         "splits": {},
     }
     for name, rows in splits.items():
@@ -51,6 +61,8 @@ def preprocess(source, output):
         summary["splits"][name] = {
             "rows_before_filter": before_filter[name],
             "dropped_score_3": dropped[name],
+            "rows_before_cold_item_filter": before_cold_filter[name],
+            "dropped_cold_item_rows": before_cold_filter[name] - len(rows),
             "rows": len(rows), "positive": sum(r[4] for r in rows),
             "negative": sum(1 - r[4] for r in rows),
         }

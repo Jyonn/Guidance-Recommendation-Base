@@ -2,14 +2,19 @@
   "source_sha256": "06416e597f82b7342361e41163890c81036900f418ad91315590814211dca490",
   "original_rows": 100000,
   "dropped_score_3": 27145,
-  "retained_rows": 72855,
+  "dropped_cold_item_rows": 97,
+  "dropped_cold_items": 68,
+  "train_items": 1574,
+  "retained_rows": 72758,
   "users": 943,
-  "items": 1642,
-  "split_rule": "Per user on all interactions; timestamp then item_id order; train length floor(0.8*N), validation length floor(0.1*N), remainder test; then remove score=3 within each split",
+  "items": 1574,
+  "split_rule": "Per user on all interactions; timestamp then item_id order; train length floor(0.8*N), validation length floor(0.1*N), remainder test; then remove score=3 within each split; then keep evaluation items present in filtered training set",
   "splits": {
     "train": {
       "rows_before_filter": 79619,
       "dropped_score_3": 21367,
+      "rows_before_cold_item_filter": 58252,
+      "dropped_cold_item_rows": 0,
       "rows": 58252,
       "positive": 45602,
       "negative": 12650
@@ -17,16 +22,20 @@
     "validation": {
       "rows_before_filter": 9596,
       "dropped_score_3": 2795,
-      "rows": 6801,
-      "positive": 4618,
-      "negative": 2183
+      "rows_before_cold_item_filter": 6801,
+      "dropped_cold_item_rows": 33,
+      "rows": 6768,
+      "positive": 4610,
+      "negative": 2158
     },
     "test": {
       "rows_before_filter": 10785,
       "dropped_score_3": 2983,
-      "rows": 7802,
-      "positive": 5155,
-      "negative": 2647
+      "rows_before_cold_item_filter": 7802,
+      "dropped_cold_item_rows": 64,
+      "rows": 7738,
+      "positive": 5137,
+      "negative": 2601
     }
   }
 }
