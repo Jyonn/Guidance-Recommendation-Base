@@ -18,20 +18,17 @@ def preprocess(source, output):
             if not 1 <= score <= 5:
                 raise ValueError(f"Invalid score on line {index + 1}")
             original[score] += 1
-            users[user].append((timestamp, index, item, score))
+            if score != 3:
+                users[user].append((timestamp, index, item, score))
     splits = {name: [] for name in ("train", "validation", "test")}
-    before_filter = Counter()
-    dropped = Counter()
     for user, events in sorted(users.items()):
         events.sort(key=lambda row: (row[0], row[2], row[1]))
         n = len(events)
         a = n * 8 // 10
         b = a + n // 10
         for name, part in zip(splits, (events[:a], events[a:b], events[b:])):
-            before_filter[name] += len(part)
-            dropped[name] += sum(score == 3 for _, _, _, score in part)
             splits[name].extend((user, item, score, timestamp, int(score > 3))
-                                for timestamp, _, item, score in part if score != 3)
+                                for timestamp, _, item, score in part)
     train_items = {row[1] for row in splits["train"]}
     before_cold_filter = {name: len(rows) for name, rows in splits.items()}
     cold_items = {row[1] for name in ("validation", "test")
@@ -50,7 +47,7 @@ def preprocess(source, output):
         "retained_rows": sum(map(len, splits.values())),
         "users": len(users),
         "items": len({r[1] for rows in splits.values() for r in rows}),
-        "split_rule": "Per user on all interactions; timestamp then item_id order; train length floor(0.8*N), validation length floor(0.1*N), remainder test; then remove score=3 within each split; then keep evaluation items present in filtered training set",
+        "split_rule": "Remove score=3 first; per-user timestamp then item_id order; train length floor(0.8*N), validation length floor(0.1*N), remainder test; then keep evaluation items present in training set",
         "splits": {},
     }
     for name, rows in splits.items():
@@ -59,8 +56,6 @@ def preprocess(source, output):
             writer.writerow(("user_id", "item_id", "score", "timestamp", "label"))
             writer.writerows(rows)
         summary["splits"][name] = {
-            "rows_before_filter": before_filter[name],
-            "dropped_score_3": dropped[name],
             "rows_before_cold_item_filter": before_cold_filter[name],
             "dropped_cold_item_rows": before_cold_filter[name] - len(rows),
             "rows": len(rows), "positive": sum(r[4] for r in rows),
