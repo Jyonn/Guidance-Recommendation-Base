@@ -15,11 +15,13 @@ ROOT = Path(__file__).resolve().parent
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--sampling-only", action="store_true")
+    parser.add_argument("--item-features", type=Path, default=None)
     args = parser.parse_args()
     expected = 6 if args.sampling_only else 10
     output = ROOT / "runs" / datetime.now().strftime(f"mixed-pool-{expected}-%Y%m%d-%H%M%S")
     output.mkdir(parents=True)
     (output / 'train_snapshot.py').write_bytes((ROOT / 'train.py').read_bytes())
+    (output / 'item_features.py').write_bytes((ROOT / 'item_features.py').read_bytes())
     manifest = {'python': sys.executable, 'train_sha256': hashlib.sha256((ROOT / 'train.py').read_bytes()).hexdigest(),
                 'sampling_protocol': 'train_unobserved_union_real_negative',
                 'data_sha256': {p.name: hashlib.sha256(p.read_bytes()).hexdigest()
@@ -39,6 +41,8 @@ def main():
                 command = [sys.executable, str(output / 'train_snapshot.py'), '--data-dir', str(ROOT / 'data/processed'),
                            '--model', model, '--loss', loss, '--neg-mode', mode,
                            '--threads', '1', '--output-dir', str(folder)]
+                if args.item_features is not None:
+                    command.extend(['--item-features', str(args.item_features.resolve())])
                 log = (folder / 'train.log').open('w')
                 process = subprocess.Popen(command, cwd=ROOT, env=env, stdout=log, stderr=subprocess.STDOUT)
                 job = dict(name=name, command=command, pid=process.pid)

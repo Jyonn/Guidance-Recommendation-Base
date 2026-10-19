@@ -7,7 +7,7 @@ from pathlib import Path
 
 import torch
 
-from train import MF, NCF, load_data
+from train import build_model, load_data
 
 
 @torch.no_grad()
@@ -17,8 +17,8 @@ def evaluate(checkpoint, data_dir):
     data, users, items = load_data(data_dir)
     if users != saved['user_ids'] or items != saved['item_ids']:
         raise ValueError('Checkpoint ID mappings do not match evaluation data')
-    model = (MF(len(users), len(items), config['dim']) if config['model'] == 'mf' else
-             NCF(len(users), len(items), config['dim'], config['hidden'], config['dropout']))
+    features = saved['model_state'].get('item_features.weight')
+    model = build_model(config, len(users), len(items), features)
     model.load_state_dict(saved['model_state'])
     model.eval()
     seen = {u: set() for u in range(len(users))}

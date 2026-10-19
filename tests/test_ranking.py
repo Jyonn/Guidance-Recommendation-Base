@@ -28,7 +28,7 @@ class RankingTests(unittest.TestCase):
                     test=[(0, 2, 1), (0, 6, 1), (1, 3, 0)])
         with patch('evaluate_ranking.torch.load', return_value=saved), \
              patch('evaluate_ranking.load_data', return_value=(data, saved['user_ids'], saved['item_ids'])), \
-             patch('evaluate_ranking.MF', return_value=FixedModel()):
+             patch('evaluate_ranking.build_model', return_value=FixedModel()):
             result = evaluate(Path('unused'), Path('unused'))
         self.assertEqual(result['evaluated_users'], 1)
         self.assertEqual(result['skipped_users'], 1)

@@ -68,3 +68,33 @@ python -m unittest discover -s tests -v
 Recall@K 为前 K 个推荐中命中正样本数除以该用户测试正样本总数；NDCG@K 按 log2(rank+1) 折扣，理想排序按 min(K, 测试正样本数) 计算。各组输出 `ranking_metrics.json`，运行目录输出 `ranking_summary.csv/json`。
 
 随机采样已改为混合池：未交互物品 ∪ 真实负样本，均匀、有放回采样，正样本不入池。不将全部真实负样本额外拼接到训练集。仅重跑六组 sampling 可执行 `.venv/bin/python run_experiments.py --sampling-only`；验证损失 early stopping 与其余默认参数保持不变。
+
+## 接入 Word2Vec 物品侧特征
+
+兼容隔壁 `Haonan/Word2Vec-lab` 的 `src/vectors.py` 导出的 `vectors.txt`（首行 `词数 维度`）。无需导入该仓库或安装额外依赖；若同时有 `.npz` 和 `.txt`，使用 `.txt`。尚无正式词向量时，基础模型仍可直接运行。
+
+导出完成后，在 Jyonn 目录执行（替换词向量实际路径）：
+
+```sh
+.venv/bin/python item_features.py \
+  --vectors /absolute/path/to/Word2Vec-lab/outputs/full/vectors.txt \
+  --metadata ../Haonan/ml-100k/u.item \
+  --output data/features/movie_titles.pt
+
+.venv/bin/python train.py --model mf --neg-mode random --loss bce \
+  --item-features data/features/movie_titles.pt --output-dir runs/mf-word2vec
+
+.venv/bin/python train.py --model ncf --neg-mode random --loss bpr \
+  --item-features data/features/movie_titles.pt --output-dir runs/ncf-word2vec
+
+# 也可直接运行全部10组（排除 BPR+real）
+.venv/bin/python run_experiments.py --item-features data/features/movie_titles.pt
+```
+
+物品文本取 `u.item` 的电影标题，以 Latin-1 解码；按 Word2Vec-lab 的英文规则小写分词，数字年份自动忽略。对标题中命中的原始词向量取均值后 L2 归一化，不命中的词忽略，全 OOV 标题用零向量。生成同名 JSON 报告覆盖率、维度及来源 SHA256。特征以原始 item_id 存储，加载时严格按训练索引重排，缺失训练物品 ID 会报错。文本构建不读取评分或验证/测试标签；请使用英文语料导出的词向量。
+
+MF/NCF 统一将 `item_id_embedding + Linear(title_vector, bias=False)` 作为物品表示。词向量特征冻结，仅投影层和原有模型参数参与训练；全 OOV 的物品仍可用 ID embedding 学习。不传 `--item-features` 时保持原模型结构和行为。所有损失、负样本方式及 early stopping 继续支持，当前冷物品过滤规则不变。
+
+`best.pt` 内嵌完整物品特征矩阵、投影参数和 ID 映射；`evaluate_ranking.py` 自动识别，评估不需要原始 Word2Vec 文件或特征文件。旧的纯 ID 模型 checkpoint 仍可评估。`data/features/` 仅保存在本地，不纳入 Git。
+
+特征接口已用小型合成词向量验证池化、OOV、ID 重排、冻结词向量、投影梯度、全部12种训练组合及移除特征文件后的 checkpoint 评估。合成向量仅用于功能测试，不代表正式预训练效果；正式向量导出后再运行实验比较。

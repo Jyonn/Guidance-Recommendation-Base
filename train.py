@@ -15,24 +15,45 @@ from torch.utils.data import DataLoader, TensorDataset
 ROOT = Path(__file__).resolve().parent
 
 
+def attach_features(model, features):
+    if features is not None:
+        model.item_features = nn.Embedding.from_pretrained(features, freeze=True)
+        model.feature_projection = nn.Linear(features.shape[1], model.item.embedding_dim, bias=False)
+
+
+def item_vector(model, item):
+    vector = model.item(item)
+    if hasattr(model, 'item_features'):
+        vector = vector + model.feature_projection(model.item_features(item))
+    return vector
+
+
+def build_model(config, users, items, features=None):
+    if config['model'] == 'mf':
+        return MF(users, items, config['dim'], features)
+    return NCF(users, items, config['dim'], config['hidden'], config['dropout'], features)
+
+
 class MF(nn.Module):
-    def __init__(self, users, items, dim):
+    def __init__(self, users, items, dim, features=None):
         super().__init__()
         self.user = nn.Embedding(users, dim)
         self.item = nn.Embedding(items, dim)
+        attach_features(self, features)
         nn.init.normal_(self.user.weight, std=0.1)
         nn.init.normal_(self.item.weight, std=0.1)
 
     def forward(self, user, item):
-        return (self.user(user) * self.item(item)).sum(-1)
+        return (self.user(user) * item_vector(self, item)).sum(-1)
 
 
 class NCF(nn.Module):
     """Embedding concatenation followed by a plain MLP."""
-    def __init__(self, users, items, dim, hidden, dropout):
+    def __init__(self, users, items, dim, hidden, dropout, features=None):
         super().__init__()
         self.user = nn.Embedding(users, dim)
         self.item = nn.Embedding(items, dim)
+        attach_features(self, features)
         layers = []
         width = 2 * dim
         for size in hidden:
@@ -42,7 +63,7 @@ class NCF(nn.Module):
         self.mlp = nn.Sequential(*layers)
 
     def forward(self, user, item):
-        return self.mlp(torch.cat([self.user(user), self.item(item)], -1)).squeeze(-1)
+        return self.mlp(torch.cat([self.user(user), item_vector(self, item)], -1)).squeeze(-1)
 
 
 def load_data(directory):
@@ -126,8 +147,11 @@ def run(args):
     torch.set_num_threads(args.threads)
     device = torch.device(args.device)
     data, user_ids, item_ids = load_data(args.data_dir)
-    model = (MF(len(user_ids), len(item_ids), args.dim) if args.model == 'mf' else
-             NCF(len(user_ids), len(item_ids), args.dim, args.hidden, args.dropout)).to(device)
+    features = None
+    if args.item_features is not None:
+        from item_features import load_features
+        features = load_features(args.item_features, item_ids)
+    model = build_model(vars(args), len(user_ids), len(item_ids), features).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     # Both training modes share fixed, real-label validation/test data.
     validation = make_examples(data['validation'], args.loss, 'real', len(item_ids), args.negatives, args.seed)
@@ -184,6 +208,7 @@ def parser():
     p.add_argument('--loss', choices=['bce', 'mse', 'bpr'], default='bce')
     p.add_argument('--data-dir', type=Path, default=ROOT / 'data/processed')
     p.add_argument('--output-dir', type=Path, default=ROOT / 'runs/default')
+    p.add_argument('--item-features', type=Path, default=None, help='Optional movie title feature .pt')
     p.add_argument('--dim', type=int, default=32)
     p.add_argument('--hidden', type=int, nargs='+', default=[64, 32])
     p.add_argument('--dropout', type=float, default=0.0)
