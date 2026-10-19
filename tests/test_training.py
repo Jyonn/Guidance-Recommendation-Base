@@ -14,14 +14,24 @@ class TrainingTests(unittest.TestCase):
     def test_sampling_and_pairing(self):
         rows = [(0, 0, 1), (0, 1, 0), (1, 2, 1), (1, 3, 0)]
         sampled = make_examples(rows, 'bce', 'random', 5, 4, 7)
-        observed = {0: {0, 1}, 1: {2, 3}}
+        positives = {0: {0}, 1: {2}}
         for u, i, y in sampled:
             if y == 0:
-                self.assertNotIn(int(i), observed[int(u)])
+                self.assertNotIn(int(i), positives[int(u)])
         self.assertTrue(all(torch.equal(a, b) for a, b in zip(
             sampled.tensors, make_examples(rows, 'bce', 'random', 5, 4, 7).tensors)))
         pairs = make_examples(rows, 'bpr', 'real', 5, 1, 7)
         self.assertEqual([tuple(map(int, row)) for row in pairs], [(0, 0, 1), (1, 2, 3)])
+
+    def test_random_pool_includes_real_negatives(self):
+        # With no unseen items, the true negative must still be sampled.
+        rows = [(0, 0, 1), (0, 1, 0)]
+        for loss in ('bce', 'mse', 'bpr'):
+            examples = make_examples(rows, loss, 'random', 2, 2, 42)
+            if loss == 'bpr':
+                self.assertEqual([tuple(map(int, r)) for r in examples], [(0, 0, 1), (0, 0, 1)])
+            else:
+                self.assertEqual([tuple(map(int, r)) for r in examples], [(0, 0, 1), (0, 1, 0), (0, 1, 0)])
 
     def test_bpr_direction(self):
         model = MF(1, 2, 1)

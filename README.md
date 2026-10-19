@@ -33,7 +33,7 @@ python train.py --model ncf --neg-mode random --loss bpr --dim 32 --hidden 64 32
 ```
 
 - 模型：`mf` 为用户/物品 embedding 内积；`ncf` 为 embedding 拼接后接 MLP，不含侧信息或额外网络。
-- 负样本方式：`real` 使用真实正负交互；`random` 仅保留训练正交互，每个正样本抽取 `--negatives` 个负物品。候选为训练集物品全集减去该用户全部训练交互，每轮重新采样、有放回。不使用验证/测试信息，未观测物品可能含未来正交互。
+- 负样本方式：`real` 使用真实正负交互；`random` 仅保留训练正交互，每个正样本抽取 `--negatives` 个负物品。候选为训练集物品全集中该用户未交互的物品与该用户真实负样本的并集，每轮重新采样、有放回。不使用验证/测试信息，未观测物品可能含未来正交互。
 - 损失：`bce` 使用 logits 的二元交叉熵；`mse` 使用 sigmoid 分数与 0/1 标签的均方误差；`bpr` 使用 `softplus(negative_score-positive_score)`。BPR 对每个正样本在同一用户的负物品池抽取 `--negatives` 个配对；没有正样本或没有候选负物品的用户不参与 BPR。随机模式无候选负物品时，点式损失仅保留正样本。
 - 验证与测试：两种训练方式均使用真实标签。BCE/MSE 使用全部交互；BPR 使用各集合内部真实正负交互，固定种子生成配对，无可配对用户不参与；没有任何可用样本时明确报错。报告的是对应损失，不是 Recall/NDCG，三种损失的数值不可直接横向比较。
 - Early stopping：每轮检查验证损失，下降超过 `--min-delta` 才算改进；连续 `--patience` 轮未改进则停止，恢复最佳权重后仅评估一次测试集。
@@ -66,3 +66,5 @@ python -m unittest discover -s tests -v
 加载每组最佳权重，以过滤后的训练物品全集为候选，排除每个用户训练及验证集的全部已交互物品（含真实负样本），测试集 score>3 为相关项。不做候选负采样。对至少有一个测试正样本的用户做宏平均，输出 Recall/NDCG@5/10/20；同分按原始 item_id 升序排列。无测试正样本的用户不计入均值，数量会单独报告。排序评估使用原始模型分数，与 sigmoid 分数排序一致。各组使用相同数据和候选集合。
 
 Recall@K 为前 K 个推荐中命中正样本数除以该用户测试正样本总数；NDCG@K 按 log2(rank+1) 折扣，理想排序按 min(K, 测试正样本数) 计算。各组输出 `ranking_metrics.json`，运行目录输出 `ranking_summary.csv/json`。
+
+随机采样已改为混合池：未交互物品 ∪ 真实负样本，均匀、有放回采样，正样本不入池。不将全部真实负样本额外拼接到训练集。仅重跑六组 sampling 可执行 `.venv/bin/python run_experiments.py --sampling-only`；验证损失 early stopping 与其余默认参数保持不变。

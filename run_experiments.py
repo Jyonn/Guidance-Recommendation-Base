@@ -1,4 +1,5 @@
 """Run ten independent training processes concurrently (exclude BPR + real)."""
+import argparse
 import csv
 import hashlib
 import json
@@ -12,10 +13,15 @@ ROOT = Path(__file__).resolve().parent
 
 
 def main():
-    output = ROOT / 'runs' / datetime.now().strftime('parallel-10-%Y%m%d-%H%M%S')
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--sampling-only", action="store_true")
+    args = parser.parse_args()
+    expected = 6 if args.sampling_only else 10
+    output = ROOT / "runs" / datetime.now().strftime(f"mixed-pool-{expected}-%Y%m%d-%H%M%S")
     output.mkdir(parents=True)
     (output / 'train_snapshot.py').write_bytes((ROOT / 'train.py').read_bytes())
     manifest = {'python': sys.executable, 'train_sha256': hashlib.sha256((ROOT / 'train.py').read_bytes()).hexdigest(),
+                'sampling_protocol': 'train_unobserved_union_real_negative',
                 'data_sha256': {p.name: hashlib.sha256(p.read_bytes()).hexdigest()
                                 for p in (ROOT / 'data/processed').glob('*.csv')}, 'jobs': []}
     processes = []
@@ -23,6 +29,8 @@ def main():
     for model in ('mf', 'ncf'):
         for loss in ('bce', 'mse', 'bpr'):
             for mode in ('real', 'random'):
+                if args.sampling_only and mode == 'real':
+                    continue
                 if loss == 'bpr' and mode == 'real':
                     continue
                 name = f'{model}-{loss}-' + ('sampling' if mode == 'random' else 'real')
@@ -55,9 +63,9 @@ def main():
             writer = csv.DictWriter(stream, fieldnames=list(results[0]))
             writer.writeheader()
             writer.writerows(results)
-    if len(results) != 10:
-        raise RuntimeError(f'Only {len(results)}/10 experiments succeeded; inspect train.log')
-    print(f'PASS: 10/10 completed; summary: {output / "summary.csv"}', flush=True)
+    if len(results) != expected:
+        raise RuntimeError(f'Only {len(results)}/{expected} experiments succeeded; inspect train.log')
+    print(f'PASS: {expected}/{expected} completed; summary: {output / "summary.csv"}', flush=True)
 
 
 if __name__ == '__main__':

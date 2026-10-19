@@ -70,8 +70,9 @@ def make_examples(rows, loss, mode, n_items, negatives, seed):
         (positive if y else negative)[u].append(i)
         observed[u].add(i)
     if mode == 'random':
-        # Training catalog only; exclude every training interaction, positive or negative.
-        negative = {u: sorted(set(range(n_items)) - observed[u]) for u in positive}
+        # Training catalog only: unseen items union the user's real negatives.
+        negative = {u: sorted((set(range(n_items)) - observed[u]) | set(negative[u]))
+                    for u in positive}
     if loss == 'bpr':
         examples = [(u, p, rng.choice(negative[u]))
                     for u, items in positive.items() if negative.get(u)
